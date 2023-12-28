@@ -13,3 +13,9 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/Nanahuse/VoicepeakWrapper"
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "flake8", "black", "isort", "mypy"]
+
+[tool.black]
+line-length = 120
