@@ -62,7 +62,7 @@ class Voicepeak:
             case str(), None:
                 command.append(f'-s "{text}"')
             case None, str():
-                command.append(f"-t {text_file}")
+                command.append(f'-t "{text_file}"')
             case None, None:
                 raise ValueError("textまたはtext_fileが設定されている必要があります。")
             case _:
@@ -73,9 +73,9 @@ class Voicepeak:
 
         match narrator:
             case Narrator():
-                command.append(f"-n {narrator.name}")
+                command.append(f'-n "{narrator.name}"')
             case str():
-                command.append(f"-n {narrator}")
+                command.append(f'-n "{narrator}"')
             case None:
                 pass
 
@@ -195,7 +195,7 @@ class Voicepeak:
         Returns:
             tuple[str]: ナレーターの名前一覧
         """
-        return tuple(tmp for tmp in (await self.__async_run("--list-narrator")).split())
+        return tuple(tmp for tmp in (await self.__async_run("--list-narrator")).splitlines())
 
     async def get_emotion_list(self, name: str) -> tuple[str]:
         """
@@ -207,4 +207,4 @@ class Voicepeak:
         Returns:
             tuple[str]: ナレーターの感情名一覧
         """
-        return tuple(tmp for tmp in (await self.__async_run(f"--list-emotion {name}")).split())
+        return tuple(tmp for tmp in (await self.__async_run(f'--list-emotion "{name}"')).splitlines())
