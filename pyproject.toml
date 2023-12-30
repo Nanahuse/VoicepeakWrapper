@@ -1,6 +1,6 @@
 [project]
 name = "voicepeak_wrapper"
-version = "1.0"
+version = "1.1"
 description = "VOICEPEAKの非公式ラッパーです。詳しくはHomepage(Github)をご覧ください"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
