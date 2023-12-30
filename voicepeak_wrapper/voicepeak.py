@@ -10,7 +10,7 @@ import os
 @dataclass
 class Narrator(object):
     name: str
-    emotions: tuple[str]
+    emotions: tuple[str, ...]
 
 
 class Voicepeak:
@@ -53,7 +53,7 @@ class Voicepeak:
         emotions: dict[str, int] | None = None,
         speed: int | None = None,
         pitch: int | None = None,
-    ):
+    ) -> str:
         command = list()
 
         match text, text_file:
@@ -174,7 +174,7 @@ class Voicepeak:
             )
         )
 
-    async def get_narrator_list(self) -> tuple[Narrator]:
+    async def get_narrator_list(self) -> tuple[Narrator, ...]:
         """
         ナレーターとその感情名一覧を取得します。
 
@@ -188,7 +188,7 @@ class Voicepeak:
             narrator_list.append(Narrator(name, emotions))
         return tuple(narrator_list)
 
-    async def get_narrator_name_list(self) -> tuple[str]:
+    async def get_narrator_name_list(self) -> tuple[str, ...]:
         """
         使用可能なナレーターを取得します。
 
@@ -197,7 +197,7 @@ class Voicepeak:
         """
         return tuple(tmp for tmp in (await self.__async_run("--list-narrator")).splitlines())
 
-    async def get_emotion_list(self, name: str) -> tuple[str]:
+    async def get_emotion_list(self, name: str) -> tuple[str, ...]:
         """
         ナレーターの感情名一覧を取得する。
 
