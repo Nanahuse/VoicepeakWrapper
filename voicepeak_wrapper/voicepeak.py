@@ -3,8 +3,8 @@
 # https://opensource.org/license/mit/
 
 import asyncio
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 
 
 @dataclass
@@ -29,9 +29,10 @@ class Voicepeak:
             raise FileNotFoundError("VOICEPEAKの実行ファイルが見つかりません")
         self.__exe_path = exe_path
 
-    async def __async_run(self, cmd: str) -> str:
-        proc = await asyncio.create_subprocess_shell(
-            f'"{self.__exe_path}" {cmd}',
+    async def __async_run(self, args: list[str]) -> str:
+        proc = await asyncio.create_subprocess_exec(
+            self.__exe_path,
+            *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -53,38 +54,38 @@ class Voicepeak:
         emotions: dict[str, int] | None = None,
         speed: int | None = None,
         pitch: int | None = None,
-    ) -> str:
-        command = list()
+    ) -> list[str]:
+        args = []
 
         match text, text_file:
             case str(), str():
                 raise ValueError("textかtext_fileの一方のみ指定してください")
             case str(), None:
-                command.append(f'-s "{text}"')
+                args += ["-s", text]
             case None, str():
-                command.append(f'-t "{text_file}"')
+                args += ["-t", text_file]
             case None, None:
                 raise ValueError("textまたはtext_fileが設定されている必要があります。")
             case _:
                 raise ValueError("textまたはtext_fileが不正な値です。")
 
         if output_path is not None:
-            command.append(f'-o "{output_path}"')
+            args += ["-o", output_path]
 
         match narrator:
             case Narrator():
-                command.append(f'-n "{narrator.name}"')
+                args += ["-n", narrator.name]
             case str():
-                command.append(f'-n "{narrator}"')
+                args += ["-n", narrator]
             case None:
                 pass
 
         if emotions is not None:
-            command.append(f'-e {",".join(f"{param}={value}" for param, value in emotions.items())}')
+            args += ["-e", ",".join(f"{param}={value}" for param, value in emotions.items())]
 
         SPEED_RANGE = (50, 200)
         if isinstance(speed, int) and (SPEED_RANGE[0] <= speed <= SPEED_RANGE[1]):
-            command.append(f"--speed {speed}")
+            args += ["--speed", str(speed)]
         elif speed is None:
             pass
         else:
@@ -92,13 +93,13 @@ class Voicepeak:
 
         PITCH_RANGE = (-300, 300)
         if isinstance(pitch, int) and (PITCH_RANGE[0] <= pitch <= PITCH_RANGE[1]):
-            command.append(f"--pitch {pitch}")
+            args += ["--pitch", str(pitch)]
         elif pitch is None:
             pass
         else:
             raise ValueError(f"pitchは{PITCH_RANGE[0]} - {PITCH_RANGE[1]}の範囲内の整数")
 
-        return " ".join(command)
+        return args
 
     async def say_text(
         self,
@@ -195,7 +196,7 @@ class Voicepeak:
         Returns:
             tuple[str]: ナレーターの名前一覧
         """
-        return tuple(tmp for tmp in (await self.__async_run("--list-narrator")).splitlines())
+        return tuple(tmp for tmp in (await self.__async_run(["--list-narrator"])).splitlines())
 
     async def get_emotion_list(self, name: str) -> tuple[str, ...]:
         """
@@ -207,4 +208,4 @@ class Voicepeak:
         Returns:
             tuple[str]: ナレーターの感情名一覧
         """
-        return tuple(tmp for tmp in (await self.__async_run(f'--list-emotion "{name}"')).splitlines())
+        return tuple(tmp for tmp in (await self.__async_run(["--list-emotion", name])).splitlines())
