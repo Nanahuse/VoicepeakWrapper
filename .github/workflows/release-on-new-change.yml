@@ -54,13 +54,11 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Build wheel
-        run: uv build --wheel --out-dir dist --clear
-
-      - name: Locate wheel artifact
         id: wheel
         shell: bash
         run: |
           set -euo pipefail
+          uv build --wheel --out-dir dist --clear
           WHEEL_PATH=$(ls dist/*.whl | head -n 1)
           echo "Found wheel: ${WHEEL_PATH}"
           echo "WHEEL_PATH=${WHEEL_PATH}" >> "$GITHUB_OUTPUT"
