@@ -44,6 +44,9 @@ jobs:
     needs: check
     if: needs.check.outputs.tag_exists == 'false'
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write # for PyPI trusted publishing.
+      contents: read # for PyPI trusted publishing.
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -76,3 +79,6 @@ jobs:
           draft: true
           prerelease: false
           files: ${{ steps.wheel.outputs.WHEEL_PATH }}
+
+      - name: Publish to PyPI
+        run: uv publish --trusted-publishing always
