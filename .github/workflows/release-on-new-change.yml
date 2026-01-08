@@ -1,0 +1,90 @@
+name: Release on version change
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      current_version: ${{ steps.version.outputs.CURRENT_VERSION }}
+      tag_exists: ${{ steps.tag.outputs.EXISTS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Get version
+        id: version
+        run: |
+          CURRENT_VERSION=$(uv version --short)
+          echo "Current version: ${CURRENT_VERSION}"
+          echo "CURRENT_VERSION=${CURRENT_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Check version tag existence
+        id: tag
+        run: |
+          if git rev-parse "refs/tags/${{ steps.version.outputs.CURRENT_VERSION }}" >/dev/null 2>&1; then
+            echo "EXISTS=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "EXISTS=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    needs: check
+    if: needs.check.outputs.tag_exists == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build wheel
+        run: uv build --wheel --out-dir dist --clear
+
+      - name: Locate wheel artifact
+        id: wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          WHEEL_PATH=$(ls dist/*.whl | head -n 1)
+          echo "Found wheel: ${WHEEL_PATH}"
+          echo "WHEEL_PATH=${WHEEL_PATH}" >> "$GITHUB_OUTPUT"
+          echo "WHEEL_NAME=$(basename "${WHEEL_PATH}")" >> "$GITHUB_OUTPUT"
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.check.outputs.current_version }}
+          release_name: ver.${{ needs.check.outputs.current_version }}
+          body: |
+            Automated release for version ${{ needs.check.outputs.current_version }}.
+          draft: false
+          prerelease: false
+
+      - name: Upload wheel asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.wheel.outputs.WHEEL_PATH }}
+          asset_name: ${{ steps.wheel.outputs.WHEEL_NAME }}
+          asset_content_type: application/octet-stream
