@@ -2,8 +2,9 @@
 # This software is released under the MIT License
 # https://opensource.org/license/mit/
 
-import pytest
 import os
+
+import pytest
 
 TEST_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_PATH = os.path.join(TEST_DIRECTORY, "output")
@@ -37,8 +38,7 @@ async def test_get_narrator_name_list():
     client = voicepeak_wrapper.Voicepeak()
     narrator_names = await client.get_narrator_name_list()
     with open(os.path.join(OUTPUT_PATH, "narrator_names.txt"), mode="w", encoding="UTF-8") as f:
-        for name in narrator_names:
-            f.write(f"{name}\n")
+        f.writelines(f"{name}\n" for name in narrator_names)
 
 
 @pytest.mark.asyncio

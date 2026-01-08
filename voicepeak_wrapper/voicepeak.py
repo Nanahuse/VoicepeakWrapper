@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Narrator(object):
+class Narrator:
     name: str
     emotions: tuple[str, ...]
 
