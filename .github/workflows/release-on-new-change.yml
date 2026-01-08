@@ -66,25 +66,15 @@ jobs:
           echo "WHEEL_PATH=${WHEEL_PATH}" >> "$GITHUB_OUTPUT"
           echo "WHEEL_NAME=$(basename "${WHEEL_PATH}")" >> "$GITHUB_OUTPUT"
 
-      - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Create Github draft release
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.check.outputs.current_version }}
-          release_name: ver.${{ needs.check.outputs.current_version }}
+          name: ver.${{ needs.check.outputs.current_version }}
           body: |
             Automated release for version ${{ needs.check.outputs.current_version }}.
-          draft: false
+          draft: true
           prerelease: false
-
-      - name: Upload wheel asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.wheel.outputs.WHEEL_PATH }}
-          asset_name: ${{ steps.wheel.outputs.WHEEL_NAME }}
-          asset_content_type: application/octet-stream
+          files: ${{ steps.wheel.outputs.WHEEL_PATH }}
