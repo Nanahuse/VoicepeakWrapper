@@ -14,8 +14,31 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/Nanahuse/VoicepeakWrapper"
 
-[project.optional-dependencies]
-dev = ["pytest", "pytest-asyncio", "flake8", "black", "isort", "mypy"]
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.14.10",
+    "ty>=0.0.9",
+]
 
-[tool.black]
+[tool.ruff]
 line-length = 120
+lint.fixable = ["ALL"]
+lint.select = ["ALL"]
+lint.ignore = [
+    "A002",
+    "EM101",
+    "EM102",
+    "FIX002",
+    "S101",
+    "TRY003",
+    "TRY300",
+    "COM812",
+    "RUF002",
+    "D",
+    "TD",
+]
+
+[tool.ruff.per-file-ignores]
+"test/*" = ["INP001", "PLR2004", "SLF001"]
