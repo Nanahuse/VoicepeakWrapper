@@ -183,7 +183,7 @@ class Voicepeak:
             tuple[Narrator]: ナレーター一覧
         """
         narrators = await self.get_narrator_name_list()
-        narrator_list = list()
+        narrator_list = []
         for name in narrators:
             emotions = await self.get_emotion_list(name)
             narrator_list.append(Narrator(name, emotions))

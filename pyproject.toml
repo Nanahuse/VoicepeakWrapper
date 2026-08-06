@@ -24,21 +24,9 @@ dev = [
 
 [tool.ruff]
 line-length = 120
-lint.fixable = ["ALL"]
-lint.select = ["ALL"]
-lint.ignore = [
-    "A002",
-    "EM101",
-    "EM102",
-    "FIX002",
-    "S101",
-    "TRY003",
-    "TRY300",
-    "COM812",
-    "RUF002",
-    "D",
-    "TD",
-]
 
-[tool.ruff.per-file-ignores]
-"test/*" = ["INP001", "PLR2004", "SLF001"]
+[tool.ruff.lint]
+ignore = ["E722", "E203"]
+
+[tool.ty.environment]
+python-version = "3.10"
