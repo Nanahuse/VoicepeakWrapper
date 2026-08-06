@@ -3,6 +3,7 @@
 # https://opensource.org/license/mit/
 
 import asyncio
+import os
 from unittest.mock import AsyncMock
 
 import pytest
@@ -13,7 +14,8 @@ class ProcessResult:
         self.communicate = AsyncMock(return_value=(stdout, stderr))
 
 
-def create_client():
+def create_client(monkeypatch):
+    monkeypatch.setenv("ProgramFiles", os.path.dirname(__file__))
     import voicepeak_wrapper
 
     return voicepeak_wrapper.Voicepeak(exe_path=__file__)
@@ -27,7 +29,7 @@ def mock_process(monkeypatch, *results):
 
 @pytest.mark.asyncio
 async def test_get_narrator_name_list_decodes_terminal_output(monkeypatch):
-    client = create_client()
+    client = create_client(monkeypatch)
     process = ProcessResult("Japanese Female 1\nJapanese Male 1\n".encode())
     create_subprocess = mock_process(monkeypatch, process)
 
@@ -43,7 +45,7 @@ async def test_get_narrator_name_list_decodes_terminal_output(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_emotion_list_decodes_terminal_output(monkeypatch):
-    client = create_client()
+    client = create_client(monkeypatch)
     process = ProcessResult("happy\nsad\n".encode())
     mock_process(monkeypatch, process)
 
@@ -52,9 +54,9 @@ async def test_get_emotion_list_decodes_terminal_output(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_narrator_list_uses_each_terminal_output(monkeypatch):
+    client = create_client(monkeypatch)
     import voicepeak_wrapper
 
-    client = create_client()
     processes = (
         ProcessResult("Japanese Female 1\nJapanese Male 1\n".encode()),
         ProcessResult("happy\nsad\n".encode()),
@@ -70,7 +72,7 @@ async def test_get_narrator_list_uses_each_terminal_output(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_say_text_returns_decoded_terminal_output(monkeypatch):
-    client = create_client()
+    client = create_client(monkeypatch)
     process = ProcessResult("completed\n".encode())
     create_subprocess = mock_process(monkeypatch, process)
 
@@ -91,7 +93,7 @@ async def test_say_text_returns_decoded_terminal_output(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_terminal_error_is_decoded_as_runtime_error(monkeypatch):
-    client = create_client()
+    client = create_client(monkeypatch)
     process = ProcessResult(stderr="narrator not found\n".encode())
     mock_process(monkeypatch, process)
 
