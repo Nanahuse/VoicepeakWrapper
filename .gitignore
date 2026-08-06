@@ -165,3 +165,6 @@ uv.lock
 .python-version
 
 .vscode
+
+# Local agent instructions
+AGENTS.md
