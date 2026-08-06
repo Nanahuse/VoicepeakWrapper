@@ -26,7 +26,24 @@ dev = [
 line-length = 120
 
 [tool.ruff.lint]
-ignore = ["E722", "E203"]
+ignore = [
+    "A002",
+    "COM812",
+    "D",
+    "E203",
+    "E722",
+    "EM101",
+    "EM102",
+    "FIX002",
+    "RUF002",
+    "S101",
+    "TD",
+    "TRY003",
+    "TRY300",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"test/*" = ["INP001", "PLR2004", "SLF001"]
 
 [tool.ty.environment]
 python-version = "3.10"
