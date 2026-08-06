@@ -39,6 +39,4 @@ lint.ignore = [
     "D",
     "TD",
 ]
-
-[tool.ruff.per-file-ignores]
-"test/*" = ["INP001", "PLR2004", "SLF001"]
+lint.per-file-ignores = { "test/*" = ["INP001", "PLR2004", "SLF001"] }

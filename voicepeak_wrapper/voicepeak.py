@@ -6,6 +6,7 @@ import asyncio
 import os
 from dataclasses import dataclass
 from os import PathLike
+from pathlib import Path
 
 
 @dataclass
@@ -14,11 +15,40 @@ class Narrator:
     emotions: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class _SayRequest:
+    text: str | None = None
+    text_file: str | PathLike[str] | None = None
+    output_path: str | PathLike[str] | None = None
+    narrator: Narrator | str | None = None
+    emotions: dict[str, int] | None = None
+    speed: int | None = None
+    pitch: int | None = None
+
+
+_SPEED_RANGE = (50, 200)
+_PITCH_RANGE = (-300, 300)
+_DEFAULT_EXE_PATH = os.path.join(  # noqa: PTH118
+    os.environ["ProgramFiles"],  # noqa: SIM112
+    "VOICEPEAK",
+    "voicepeak.exe",
+)
+
+
+def _append_range(args: list[str], option: str, label: str, value: int | None, value_range: tuple[int, int]) -> None:
+    if value is None:
+        return
+    if isinstance(value, int) and value_range[0] <= value <= value_range[1]:
+        args += [option, str(value)]
+        return
+    raise ValueError(f"{label}は{value_range[0]} - {value_range[1]}の範囲内の整数")
+
+
 class Voicepeak:
     def __init__(
         self,
-        exe_path: str | PathLike[str] = os.path.join(os.environ["ProgramFiles"], "VOICEPEAK", "voicepeak.exe"),
-    ):
+        exe_path: str | PathLike[str] = _DEFAULT_EXE_PATH,
+    ) -> None:
         """
         標準のインストール先ではない場所にVOICEPEAKインストールした場合はexe_pathを指定してください。
 
@@ -26,8 +56,7 @@ class Voicepeak:
             exe_path (str | os.PathLike[str], optional): voicepeak.exeへのパス。strまたはpathlib.Pathで指定できる。
                 Defaultは標準のインストール先。
         """
-
-        if not os.path.exists(exe_path):
+        if not Path(exe_path).exists():
             raise FileNotFoundError("VOICEPEAKの実行ファイルが見つかりません")
         self.__exe_path = exe_path
 
@@ -47,23 +76,10 @@ class Voicepeak:
 
         return stdout.decode()
 
-    def __make_say_command(
-        self,
-        text: str | None = None,
-        text_file: str | PathLike[str] | None = None,
-        output_path: str | PathLike[str] | None = None,
-        narrator: Narrator | str | None = None,
-        emotions: dict[str, int] | None = None,
-        speed: int | None = None,
-        pitch: int | None = None,
-    ) -> list[str]:
-        args = []
-
-        if text_file is not None:
-            text_file = os.fspath(text_file)
-        if output_path is not None:
-            output_path = os.fspath(output_path)
-
+    @staticmethod
+    def __append_text_args(args: list[str], request: _SayRequest) -> None:
+        text = request.text
+        text_file = os.fspath(request.text_file) if request.text_file is not None else None
         match text, text_file:
             case str(), str():
                 raise ValueError("textかtext_fileの一方のみ指定してください")
@@ -76,9 +92,8 @@ class Voicepeak:
             case _:
                 raise ValueError("textまたはtext_fileが不正な値です。")
 
-        if output_path is not None:
-            args += ["-o", output_path]
-
+    @staticmethod
+    def __append_narrator(args: list[str], narrator: Narrator | str | None) -> None:
         match narrator:
             case Narrator():
                 args += ["-n", narrator.name]
@@ -87,28 +102,23 @@ class Voicepeak:
             case None:
                 pass
 
+    @staticmethod
+    def __append_emotions(args: list[str], emotions: dict[str, int] | None) -> None:
         if emotions is not None:
             args += ["-e", ",".join(f"{param}={value}" for param, value in emotions.items())]
 
-        SPEED_RANGE = (50, 200)
-        if isinstance(speed, int) and (SPEED_RANGE[0] <= speed <= SPEED_RANGE[1]):
-            args += ["--speed", str(speed)]
-        elif speed is None:
-            pass
-        else:
-            raise ValueError(f"speedは{SPEED_RANGE[0]} - {SPEED_RANGE[1]}の範囲内の整数")
-
-        PITCH_RANGE = (-300, 300)
-        if isinstance(pitch, int) and (PITCH_RANGE[0] <= pitch <= PITCH_RANGE[1]):
-            args += ["--pitch", str(pitch)]
-        elif pitch is None:
-            pass
-        else:
-            raise ValueError(f"pitchは{PITCH_RANGE[0]} - {PITCH_RANGE[1]}の範囲内の整数")
-
+    def __make_say_command(self, request: _SayRequest) -> list[str]:
+        args: list[str] = []
+        self.__append_text_args(args, request)
+        if request.output_path is not None:
+            args += ["-o", os.fspath(request.output_path)]
+        self.__append_narrator(args, request.narrator)
+        self.__append_emotions(args, request.emotions)
+        _append_range(args, "--speed", "speed", request.speed, _SPEED_RANGE)
+        _append_range(args, "--pitch", "pitch", request.pitch, _PITCH_RANGE)
         return args
 
-    async def say_text(
+    async def say_text(  # noqa: PLR0913
         self,
         text: str,
         *,
@@ -117,7 +127,7 @@ class Voicepeak:
         emotions: dict[str, int] | None = None,
         speed: int | None = None,
         pitch: int | None = None,
-    ):
+    ) -> str:
         """
         テキストを読み上げたwavファイルを保存する。
 
@@ -127,9 +137,11 @@ class Voicepeak:
             output_path (str | os.PathLike[str] | None, optional): wavファイル出力先。strまたはpathlib.Pathで指定可。
                 指定しないとvoicepeak.exeと同じ階層にoutput.wavが生成される。 Defaults to None.
 
-            narrator (Narrator | str | None, optional): 読み上げを行うナレータの種類。Narrator型またはstr型の名前で指定する。 Defaults to None.
+            narrator (Narrator | str | None, optional): 読み上げを行うナレータの種類。
+                Narrator型またはstr型の名前で指定する。 Defaults to None.
 
-            emotions (dict[str, int] | None, optional): 読み上げ時の感情の指示。形式は{"感情名","値"}の辞書型。 Defaults to None.
+            emotions (dict[str, int] | None, optional): 読み上げ時の感情の指示。
+                形式は{"感情名","値"}の辞書型。 Defaults to None.
 
             speed (int | None, optional): 読み上げのスピード。100が等倍。50~200の範囲。 Defaults to None.
 
@@ -137,16 +149,18 @@ class Voicepeak:
         """
         return await self.__async_run(
             self.__make_say_command(
-                text=text,
-                output_path=output_path,
-                narrator=narrator,
-                emotions=emotions,
-                speed=speed,
-                pitch=pitch,
+                _SayRequest(
+                    text=text,
+                    output_path=output_path,
+                    narrator=narrator,
+                    emotions=emotions,
+                    speed=speed,
+                    pitch=pitch,
+                )
             )
         )
 
-    async def say_textfile(
+    async def say_textfile(  # noqa: PLR0913
         self,
         text_path: str | PathLike[str],
         *,
@@ -155,7 +169,7 @@ class Voicepeak:
         emotions: dict[str, int] | None = None,
         speed: int | None = None,
         pitch: int | None = None,
-    ):
+    ) -> str:
         """
         テキストファイル内のテキストを読み上げたwavファイルを保存する。
 
@@ -165,9 +179,11 @@ class Voicepeak:
             output_path (str | os.PathLike[str], optional): wavファイル出力先。strまたはpathlib.Pathで指定できる。
                 Defaultはoutput.wavが生成される。
 
-            narrator (Narrator | str | None, optional): 読み上げを行うナレータの種類。Narrator型またはstr型の名前で指定する。 Defaults to None.
+            narrator (Narrator | str | None, optional): 読み上げを行うナレータの種類。
+                Narrator型またはstr型の名前で指定する。 Defaults to None.
 
-            emotions (dict[str, int] | None, optional): 読み上げ時の感情の指示。形式は{"感情名","値"}の辞書型。 Defaults to None.
+            emotions (dict[str, int] | None, optional): 読み上げ時の感情の指示。
+                形式は{"感情名","値"}の辞書型。 Defaults to None.
 
             speed (int | None, optional): 読み上げのスピード。100が等倍。50~200の範囲。 Defaults to None.
 
@@ -175,12 +191,14 @@ class Voicepeak:
         """
         return await self.__async_run(
             self.__make_say_command(
-                text_file=text_path,
-                output_path=output_path,
-                narrator=narrator,
-                emotions=emotions,
-                speed=speed,
-                pitch=pitch,
+                _SayRequest(
+                    text_file=text_path,
+                    output_path=output_path,
+                    narrator=narrator,
+                    emotions=emotions,
+                    speed=speed,
+                    pitch=pitch,
+                )
             )
         )
 
@@ -192,7 +210,7 @@ class Voicepeak:
             tuple[Narrator]: ナレーター一覧
         """
         narrators = await self.get_narrator_name_list()
-        narrator_list = list()
+        narrator_list = []
         for name in narrators:
             emotions = await self.get_emotion_list(name)
             narrator_list.append(Narrator(name, emotions))
