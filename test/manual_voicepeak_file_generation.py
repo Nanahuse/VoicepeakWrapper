@@ -31,7 +31,7 @@ async def test_get_narrator_list():
                 "本日は晴天なり",
                 output_path=os.path.join(OUTPUT_PATH, f"narrator_{narrator.name}.wav"),
                 narrator=narrator,
-                emotions={narrator.emotions[1]: "100"},
+                emotions={narrator.emotions[1]: 100},
             )
 
 
@@ -42,8 +42,7 @@ async def test_get_narrator_name_list():
     client = voicepeak_wrapper.Voicepeak()
     narrator_names = await client.get_narrator_name_list()
     with open(os.path.join(OUTPUT_PATH, "narrator_names.txt"), mode="w", encoding="UTF-8") as f:
-        for name in narrator_names:
-            f.write(f"{name}\n")
+        f.writelines(f"{name}\n" for name in narrator_names)
 
 
 @pytest.mark.asyncio

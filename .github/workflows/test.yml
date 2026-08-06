@@ -17,4 +17,4 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Run tests
-        run: uv run --extra dev --with-editable . pytest
+        run: uv run --group dev --with-editable . pytest
