@@ -5,6 +5,7 @@
 import asyncio
 import os
 from dataclasses import dataclass
+from os import PathLike
 
 
 @dataclass
@@ -16,13 +17,14 @@ class Narrator:
 class Voicepeak:
     def __init__(
         self,
-        exe_path: str = os.path.join(os.environ["ProgramFiles"], "VOICEPEAK", "voicepeak.exe"),
+        exe_path: str | PathLike[str] = os.path.join(os.environ["ProgramFiles"], "VOICEPEAK", "voicepeak.exe"),
     ):
         """
         標準のインストール先ではない場所にVOICEPEAKインストールした場合はexe_pathを指定してください。
 
         Args:
-            exe_path (str, optional): voicepeak.exeへのパス。Defaultは標準のインストール先。
+            exe_path (str | os.PathLike[str], optional): voicepeak.exeへのパス。strまたはpathlib.Pathで指定できる。
+                Defaultは標準のインストール先。
         """
 
         if not os.path.exists(exe_path):
@@ -31,7 +33,7 @@ class Voicepeak:
 
     async def __async_run(self, args: list[str]) -> str:
         proc = await asyncio.create_subprocess_exec(
-            self.__exe_path,
+            os.fspath(self.__exe_path),
             *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -48,14 +50,19 @@ class Voicepeak:
     def __make_say_command(
         self,
         text: str | None = None,
-        text_file: str | None = None,
-        output_path: str | None = None,
+        text_file: str | PathLike[str] | None = None,
+        output_path: str | PathLike[str] | None = None,
         narrator: Narrator | str | None = None,
         emotions: dict[str, int] | None = None,
         speed: int | None = None,
         pitch: int | None = None,
     ) -> list[str]:
         args = []
+
+        if text_file is not None:
+            text_file = os.fspath(text_file)
+        if output_path is not None:
+            output_path = os.fspath(output_path)
 
         match text, text_file:
             case str(), str():
@@ -105,7 +112,7 @@ class Voicepeak:
         self,
         text: str,
         *,
-        output_path: str | None = None,
+        output_path: str | PathLike[str] | None = None,
         narrator: Narrator | str | None = None,
         emotions: dict[str, int] | None = None,
         speed: int | None = None,
@@ -117,7 +124,8 @@ class Voicepeak:
         Args:
             text (str): 読み上げるテキスト
 
-            output_path (str | None, optional): wavファイル出力先。指定しないとvoicepeak.exeと同じ階層にoutput.wavが生成される。 Defaults to None.
+            output_path (str | os.PathLike[str] | None, optional): wavファイル出力先。strまたはpathlib.Pathで指定可。
+                指定しないとvoicepeak.exeと同じ階層にoutput.wavが生成される。 Defaults to None.
 
             narrator (Narrator | str | None, optional): 読み上げを行うナレータの種類。Narrator型またはstr型の名前で指定する。 Defaults to None.
 
@@ -140,9 +148,9 @@ class Voicepeak:
 
     async def say_textfile(
         self,
-        text_path: str,
+        text_path: str | PathLike[str],
         *,
-        output_path: str = "./output.wav",
+        output_path: str | PathLike[str] = "./output.wav",
         narrator: Narrator | str | None = None,
         emotions: dict[str, int] | None = None,
         speed: int | None = None,
@@ -152,9 +160,10 @@ class Voicepeak:
         テキストファイル内のテキストを読み上げたwavファイルを保存する。
 
         Args:
-            text_path (str): 読み上げるテキストファイルのパス
+            text_path (str | os.PathLike[str]): 読み上げるテキストファイルのパス。strまたはpathlib.Pathで指定できる。
 
-            output_path (str , optional): wavファイル出力先。Defaultはoutput.wavが生成される。
+            output_path (str | os.PathLike[str], optional): wavファイル出力先。strまたはpathlib.Pathで指定できる。
+                Defaultはoutput.wavが生成される。
 
             narrator (Narrator | str | None, optional): 読み上げを行うナレータの種類。Narrator型またはstr型の名前で指定する。 Defaults to None.
 

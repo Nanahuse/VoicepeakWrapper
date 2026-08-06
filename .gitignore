@@ -164,3 +164,16 @@ uv.lock
 .python-version
 
 .vscode
+
+# AI agent coordination files
+#  Local-only configuration for AI coding agents. Ignored at the repo root so
+#  these files cannot accidentally enter commits, while unrelated nested
+#  project fixtures are left visible.
+/AGENTS.md
+/OPENCODE.md
+/CLAUDE.md
+/GEMINI.md
+/.agents/
+/.codex/
+/.claude/
+/.opencode/

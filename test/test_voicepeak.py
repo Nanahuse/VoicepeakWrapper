@@ -4,6 +4,7 @@
 
 import asyncio
 import os
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -19,6 +20,13 @@ def create_client(monkeypatch):
     import voicepeak_wrapper
 
     return voicepeak_wrapper.Voicepeak(exe_path=__file__)
+
+
+def create_client_with_pathlib_path(monkeypatch):
+    monkeypatch.setenv("ProgramFiles", os.path.dirname(__file__))
+    import voicepeak_wrapper
+
+    return voicepeak_wrapper.Voicepeak(exe_path=Path(__file__))
 
 
 def mock_process(monkeypatch, *results):
@@ -99,3 +107,56 @@ async def test_terminal_error_is_decoded_as_runtime_error(monkeypatch):
 
     with pytest.raises(RuntimeError, match="narrator not found"):
         await client.get_emotion_list("unknown")
+
+
+@pytest.mark.asyncio
+async def test_say_text_accepts_pathlib_path_for_output_path(monkeypatch):
+    client = create_client(monkeypatch)
+    process = ProcessResult("completed\n".encode())
+    create_subprocess = mock_process(monkeypatch, process)
+
+    await client.say_text("本日は晴天なり", output_path=Path("output.wav"))
+
+    create_subprocess.assert_awaited_once_with(
+        __file__,
+        "-s",
+        "本日は晴天なり",
+        "-o",
+        os.fspath(Path("output.wav")),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+
+@pytest.mark.asyncio
+async def test_say_textfile_accepts_pathlib_path(monkeypatch):
+    client = create_client(monkeypatch)
+    process = ProcessResult("completed\n".encode())
+    create_subprocess = mock_process(monkeypatch, process)
+
+    await client.say_textfile(Path("input.txt"), output_path=Path("output.wav"))
+
+    create_subprocess.assert_awaited_once_with(
+        __file__,
+        "-t",
+        os.fspath(Path("input.txt")),
+        "-o",
+        os.fspath(Path("output.wav")),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+
+@pytest.mark.asyncio
+async def test_voicepeak_accepts_pathlib_path_for_exe_path(monkeypatch):
+    client = create_client_with_pathlib_path(monkeypatch)
+    process = ProcessResult("Japanese Female 1\n".encode())
+    create_subprocess = mock_process(monkeypatch, process)
+
+    assert await client.get_narrator_name_list() == ("Japanese Female 1",)
+    create_subprocess.assert_awaited_once_with(
+        os.fspath(Path(__file__)),
+        "--list-narrator",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
