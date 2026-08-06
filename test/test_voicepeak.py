@@ -2,97 +2,100 @@
 # This software is released under the MIT License
 # https://opensource.org/license/mit/
 
+import asyncio
 import os
+from unittest.mock import AsyncMock
 
 import pytest
 
-TEST_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_PATH = os.path.join(TEST_DIRECTORY, "output")
+
+class ProcessResult:
+    def __init__(self, stdout: bytes = b"", stderr: bytes = b""):
+        self.communicate = AsyncMock(return_value=(stdout, stderr))
+
+
+def create_client(monkeypatch):
+    monkeypatch.setenv("ProgramFiles", os.path.dirname(__file__))
+    import voicepeak_wrapper
+
+    return voicepeak_wrapper.Voicepeak(exe_path=__file__)
+
+
+def mock_process(monkeypatch, *results):
+    create_subprocess = AsyncMock(side_effect=results)
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", create_subprocess)
+    return create_subprocess
 
 
 @pytest.mark.asyncio
-async def test_get_narrator_list():
-    import voicepeak_wrapper
+async def test_get_narrator_name_list_decodes_terminal_output(monkeypatch):
+    client = create_client(monkeypatch)
+    process = ProcessResult("Japanese Female 1\nJapanese Male 1\n".encode())
+    create_subprocess = mock_process(monkeypatch, process)
 
-    client = voicepeak_wrapper.Voicepeak()
-    narrators = await client.get_narrator_list()
-    with open(os.path.join(OUTPUT_PATH, "narrators.txt"), mode="w", encoding="UTF-8") as f:
-        for narrator in narrators:
-            f.write(narrator.name)
-            f.write(" : ")
-            f.write(", ".join(narrator.emotions))
-            f.write("\n")
-
-            await client.say_text(
-                "本日は晴天なり",
-                output_path=os.path.join(OUTPUT_PATH, f"narrator_{narrator.name}.wav"),
-                narrator=narrator,
-                emotions={narrator.emotions[1]: "100"},
-            )
-
-
-@pytest.mark.asyncio
-async def test_get_narrator_name_list():
-    import voicepeak_wrapper
-
-    client = voicepeak_wrapper.Voicepeak()
-    narrator_names = await client.get_narrator_name_list()
-    with open(os.path.join(OUTPUT_PATH, "narrator_names.txt"), mode="w", encoding="UTF-8") as f:
-        f.writelines(f"{name}\n" for name in narrator_names)
-
-
-@pytest.mark.asyncio
-async def test_get_emotion_list():
-    import voicepeak_wrapper
-
-    client = voicepeak_wrapper.Voicepeak()
-
-    narrator_names = await client.get_narrator_name_list()
-    with open(os.path.join(OUTPUT_PATH, "emotions.txt"), mode="w", encoding="UTF-8") as f:
-        for name in narrator_names:
-            emotion_list = await client.get_emotion_list(name)
-
-            f.write(name)
-            f.write(" : ")
-            f.write(", ".join(emotion_list))
-            f.write("\n")
-
-    with pytest.raises(RuntimeError):
-        await client.get_emotion_list("hogehoge")
-
-
-@pytest.mark.asyncio
-async def test_say_text():
-    import voicepeak_wrapper
-
-    client = voicepeak_wrapper.Voicepeak()
-    await client.say_text("本日は晴天なり", output_path=os.path.join(OUTPUT_PATH, "test_say_text.wav"))
-    await client.say_text(
-        "本日は晴天なり", output_path=os.path.join(OUTPUT_PATH, "test_say_text_upper.wav"), speed=200, pitch=300
+    assert await client.get_narrator_name_list() == ("Japanese Female 1", "Japanese Male 1")
+    create_subprocess.assert_awaited_once_with(
+        __file__,
+        "--list-narrator",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
-    await client.say_text(
-        "本日は晴天なり", output_path=os.path.join(OUTPUT_PATH, "test_say_text_lower.wav"), speed=50, pitch=-300
+    process.communicate.assert_awaited_once_with()
+
+
+@pytest.mark.asyncio
+async def test_get_emotion_list_decodes_terminal_output(monkeypatch):
+    client = create_client(monkeypatch)
+    process = ProcessResult("happy\nsad\n".encode())
+    mock_process(monkeypatch, process)
+
+    assert await client.get_emotion_list("Japanese Female 1") == ("happy", "sad")
+
+
+@pytest.mark.asyncio
+async def test_get_narrator_list_uses_each_terminal_output(monkeypatch):
+    client = create_client(monkeypatch)
+    import voicepeak_wrapper
+
+    processes = (
+        ProcessResult("Japanese Female 1\nJapanese Male 1\n".encode()),
+        ProcessResult("happy\nsad\n".encode()),
+        ProcessResult("happy\nangry\n".encode()),
+    )
+    mock_process(monkeypatch, *processes)
+
+    assert await client.get_narrator_list() == (
+        voicepeak_wrapper.Narrator("Japanese Female 1", ("happy", "sad")),
+        voicepeak_wrapper.Narrator("Japanese Male 1", ("happy", "angry")),
     )
 
-    with pytest.raises(ValueError):
-        await client.say_text("エラー", output_path=os.path.join(OUTPUT_PATH, "error.wav"), speed=201)
-    with pytest.raises(ValueError):
-        await client.say_text("エラー", output_path=os.path.join(OUTPUT_PATH, "error.wav"), speed=49)
-    with pytest.raises(ValueError):
-        await client.say_text("エラー", output_path=os.path.join(OUTPUT_PATH, "error.wav"), pitch=-301)
-    with pytest.raises(ValueError):
-        await client.say_text("エラー", output_path=os.path.join(OUTPUT_PATH, "error.wav"), pitch=301)
 
-    with pytest.raises(RuntimeError):
-        await client.say_text("1" * 141, output_path=os.path.join(OUTPUT_PATH, "error.wav"))
+@pytest.mark.asyncio
+async def test_say_text_returns_decoded_terminal_output(monkeypatch):
+    client = create_client(monkeypatch)
+    process = ProcessResult("completed\n".encode())
+    create_subprocess = mock_process(monkeypatch, process)
+
+    result = await client.say_text("本日は晴天なり", output_path="output.wav")
+
+    assert isinstance(result, str)
+    assert result == "completed\n"
+    create_subprocess.assert_awaited_once_with(
+        __file__,
+        "-s",
+        "本日は晴天なり",
+        "-o",
+        "output.wav",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
 
 
 @pytest.mark.asyncio
-async def test_say_testfile():
-    import voicepeak_wrapper
+async def test_terminal_error_is_decoded_as_runtime_error(monkeypatch):
+    client = create_client(monkeypatch)
+    process = ProcessResult(stderr="narrator not found\n".encode())
+    mock_process(monkeypatch, process)
 
-    client = voicepeak_wrapper.Voicepeak()
-
-    text_file = os.path.join(TEST_DIRECTORY, "sample.txt")
-
-    await client.say_textfile(text_file, output_path=os.path.join(OUTPUT_PATH, "say_text.wav"))
+    with pytest.raises(RuntimeError, match="narrator not found"):
+        await client.get_emotion_list("unknown")
