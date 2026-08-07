@@ -4,6 +4,7 @@
 
 import asyncio
 import os
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -99,3 +100,61 @@ async def test_terminal_error_is_decoded_as_runtime_error(monkeypatch):
 
     with pytest.raises(RuntimeError, match="narrator not found"):
         await client.get_emotion_list("unknown")
+
+
+@pytest.mark.asyncio
+async def test_init_accepts_path_for_exe_path(monkeypatch):
+    monkeypatch.setenv("ProgramFiles", os.path.dirname(__file__))
+    import voicepeak_wrapper
+
+    client = voicepeak_wrapper.Voicepeak(exe_path=Path(__file__))
+    process = ProcessResult(b"Japanese Female 1\n")
+    create_subprocess = mock_process(monkeypatch, process)
+
+    assert await client.get_narrator_name_list() == ("Japanese Female 1",)
+    create_subprocess.assert_awaited_once_with(
+        __file__,
+        "--list-narrator",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+
+@pytest.mark.asyncio
+async def test_say_text_accepts_path_for_output_path(monkeypatch):
+    client = create_client(monkeypatch)
+    process = ProcessResult(b"completed\n")
+    create_subprocess = mock_process(monkeypatch, process)
+
+    result = await client.say_text("本日は晴天なり", output_path=Path("output.wav"))
+
+    assert result == "completed\n"
+    create_subprocess.assert_awaited_once_with(
+        __file__,
+        "-s",
+        "本日は晴天なり",
+        "-o",
+        "output.wav",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+
+@pytest.mark.asyncio
+async def test_say_textfile_accepts_paths(monkeypatch):
+    client = create_client(monkeypatch)
+    process = ProcessResult(b"completed\n")
+    create_subprocess = mock_process(monkeypatch, process)
+
+    result = await client.say_textfile(Path("input.txt"), output_path=Path("output.wav"))
+
+    assert result == "completed\n"
+    create_subprocess.assert_awaited_once_with(
+        __file__,
+        "-t",
+        "input.txt",
+        "-o",
+        "output.wav",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
