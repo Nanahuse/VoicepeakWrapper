@@ -9,36 +9,34 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+import voicepeak_wrapper
+
 
 class ProcessResult:
-    def __init__(self, stdout: bytes = b"", stderr: bytes = b""):
+    def __init__(self, stdout: bytes = b"", stderr: bytes = b"") -> None:
         self.communicate = AsyncMock(return_value=(stdout, stderr))
 
 
-def create_client(monkeypatch):
-    monkeypatch.setenv("ProgramFiles", os.path.dirname(__file__))
-    import voicepeak_wrapper
-
+def create_client(monkeypatch: pytest.MonkeyPatch) -> voicepeak_wrapper.Voicepeak:
+    monkeypatch.setenv("PROGRAMFILES", str(Path(__file__).parent))
     return voicepeak_wrapper.Voicepeak(exe_path=__file__)
 
 
-def create_client_with_pathlib_path(monkeypatch):
-    monkeypatch.setenv("ProgramFiles", os.path.dirname(__file__))
-    import voicepeak_wrapper
-
+def create_client_with_pathlib_path(monkeypatch: pytest.MonkeyPatch) -> voicepeak_wrapper.Voicepeak:
+    monkeypatch.setenv("PROGRAMFILES", str(Path(__file__).parent))
     return voicepeak_wrapper.Voicepeak(exe_path=Path(__file__))
 
 
-def mock_process(monkeypatch, *results):
+def mock_process(monkeypatch: pytest.MonkeyPatch, *results: ProcessResult) -> AsyncMock:
     create_subprocess = AsyncMock(side_effect=results)
     monkeypatch.setattr(asyncio, "create_subprocess_exec", create_subprocess)
     return create_subprocess
 
 
 @pytest.mark.asyncio
-async def test_get_narrator_name_list_decodes_terminal_output(monkeypatch):
+async def test_get_narrator_name_list_decodes_terminal_output(monkeypatch: pytest.MonkeyPatch) -> None:
     client = create_client(monkeypatch)
-    process = ProcessResult("Japanese Female 1\nJapanese Male 1\n".encode())
+    process = ProcessResult(b"Japanese Female 1\nJapanese Male 1\n")
     create_subprocess = mock_process(monkeypatch, process)
 
     assert await client.get_narrator_name_list() == ("Japanese Female 1", "Japanese Male 1")
@@ -52,23 +50,22 @@ async def test_get_narrator_name_list_decodes_terminal_output(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_get_emotion_list_decodes_terminal_output(monkeypatch):
+async def test_get_emotion_list_decodes_terminal_output(monkeypatch: pytest.MonkeyPatch) -> None:
     client = create_client(monkeypatch)
-    process = ProcessResult("happy\nsad\n".encode())
+    process = ProcessResult(b"happy\nsad\n")
     mock_process(monkeypatch, process)
 
     assert await client.get_emotion_list("Japanese Female 1") == ("happy", "sad")
 
 
 @pytest.mark.asyncio
-async def test_get_narrator_list_uses_each_terminal_output(monkeypatch):
+async def test_get_narrator_list_uses_each_terminal_output(monkeypatch: pytest.MonkeyPatch) -> None:
     client = create_client(monkeypatch)
-    import voicepeak_wrapper
 
     processes = (
-        ProcessResult("Japanese Female 1\nJapanese Male 1\n".encode()),
-        ProcessResult("happy\nsad\n".encode()),
-        ProcessResult("happy\nangry\n".encode()),
+        ProcessResult(b"Japanese Female 1\nJapanese Male 1\n"),
+        ProcessResult(b"happy\nsad\n"),
+        ProcessResult(b"happy\nangry\n"),
     )
     mock_process(monkeypatch, *processes)
 
@@ -79,9 +76,9 @@ async def test_get_narrator_list_uses_each_terminal_output(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_say_text_returns_decoded_terminal_output(monkeypatch):
+async def test_say_text_returns_decoded_terminal_output(monkeypatch: pytest.MonkeyPatch) -> None:
     client = create_client(monkeypatch)
-    process = ProcessResult("completed\n".encode())
+    process = ProcessResult(b"completed\n")
     create_subprocess = mock_process(monkeypatch, process)
 
     result = await client.say_text("本日は晴天なり", output_path="output.wav")
@@ -100,9 +97,9 @@ async def test_say_text_returns_decoded_terminal_output(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_terminal_error_is_decoded_as_runtime_error(monkeypatch):
+async def test_terminal_error_is_decoded_as_runtime_error(monkeypatch: pytest.MonkeyPatch) -> None:
     client = create_client(monkeypatch)
-    process = ProcessResult(stderr="narrator not found\n".encode())
+    process = ProcessResult(stderr=b"narrator not found\n")
     mock_process(monkeypatch, process)
 
     with pytest.raises(RuntimeError, match="narrator not found"):
@@ -110,9 +107,9 @@ async def test_terminal_error_is_decoded_as_runtime_error(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_say_text_accepts_pathlib_path_for_output_path(monkeypatch):
+async def test_say_text_accepts_pathlib_path_for_output_path(monkeypatch: pytest.MonkeyPatch) -> None:
     client = create_client(monkeypatch)
-    process = ProcessResult("completed\n".encode())
+    process = ProcessResult(b"completed\n")
     create_subprocess = mock_process(monkeypatch, process)
 
     await client.say_text("本日は晴天なり", output_path=Path("output.wav"))
@@ -129,9 +126,9 @@ async def test_say_text_accepts_pathlib_path_for_output_path(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_say_textfile_accepts_pathlib_path(monkeypatch):
+async def test_say_textfile_accepts_pathlib_path(monkeypatch: pytest.MonkeyPatch) -> None:
     client = create_client(monkeypatch)
-    process = ProcessResult("completed\n".encode())
+    process = ProcessResult(b"completed\n")
     create_subprocess = mock_process(monkeypatch, process)
 
     await client.say_textfile(Path("input.txt"), output_path=Path("output.wav"))
@@ -148,9 +145,9 @@ async def test_say_textfile_accepts_pathlib_path(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_voicepeak_accepts_pathlib_path_for_exe_path(monkeypatch):
+async def test_voicepeak_accepts_pathlib_path_for_exe_path(monkeypatch: pytest.MonkeyPatch) -> None:
     client = create_client_with_pathlib_path(monkeypatch)
-    process = ProcessResult("Japanese Female 1\n".encode())
+    process = ProcessResult(b"Japanese Female 1\n")
     create_subprocess = mock_process(monkeypatch, process)
 
     assert await client.get_narrator_name_list() == ("Japanese Female 1",)
