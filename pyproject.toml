@@ -42,6 +42,9 @@ ignore = [
     "TRY300",
 ]
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
 [tool.ruff.lint.per-file-ignores]
 "test/*" = ["INP001", "PLR2004", "SLF001"]
 
