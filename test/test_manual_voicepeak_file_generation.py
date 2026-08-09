@@ -115,3 +115,57 @@ async def test_say_testfile():
     text_file = os.path.join(TEST_DIRECTORY, "sample.txt")
 
     await client.say_textfile(text_file, output_path=os.path.join(OUTPUT_PATH, "say_text.wav"))
+
+
+@pytest.mark.asyncio
+async def test_say_text_overwrites_existing_output_wav():
+    import voicepeak_wrapper
+
+    client = voicepeak_wrapper.Voicepeak()
+    output_path = Path(OUTPUT_PATH) / "test_overwrite.wav"
+    await asyncio.to_thread(output_path.write_bytes, b"previous generation")
+
+    await client.say_text("本日は晴天なり", output_path=output_path)
+
+    content = await asyncio.to_thread(output_path.read_bytes)
+    assert len(content) > 0
+    assert content != b"previous generation"
+    assert content[:4] == b"RIFF"
+
+
+@pytest.mark.asyncio
+async def test_say_text_with_pathlib_output_narrator_and_emotions():
+    import voicepeak_wrapper
+
+    client = voicepeak_wrapper.Voicepeak()
+    narrators = await client.get_narrator_list()
+    assert len(narrators) > 0
+    narrator = narrators[0]
+
+    output_path = Path(OUTPUT_PATH) / "test_narrator_emotions.wav"
+    emotions = {narrator.emotions[0]: 100} if narrator.emotions else None
+    await client.say_text(
+        "本日は晴天なり",
+        output_path=output_path,
+        narrator=narrator.name,
+        emotions=emotions,
+    )
+
+    content = await asyncio.to_thread(output_path.read_bytes)
+    assert len(content) > 0
+    assert content[:4] == b"RIFF"
+
+
+@pytest.mark.asyncio
+async def test_say_textfile_with_pathlib_input_and_output():
+    import voicepeak_wrapper
+
+    client = voicepeak_wrapper.Voicepeak()
+    text_file = Path(TEST_DIRECTORY) / "sample.txt"
+    output_path = Path(OUTPUT_PATH) / "test_textfile_path.wav"
+
+    await client.say_textfile(text_file, output_path=output_path, speed=120, pitch=-50)
+
+    content = await asyncio.to_thread(output_path.read_bytes)
+    assert len(content) > 0
+    assert content[:4] == b"RIFF"
