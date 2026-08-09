@@ -1,6 +1,6 @@
 [project]
 name = "voicepeak_wrapper"
-version = "1.1.1"
+version = "1.2.0"
 description = "VOICEPEAKの非公式ラッパーです。詳しくはHomepage(Github)をご覧ください"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -14,8 +14,39 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/Nanahuse/VoicepeakWrapper"
 
-[project.optional-dependencies]
-dev = ["pytest", "pytest-asyncio", "flake8", "black", "isort", "mypy"]
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.14.10",
+    "ty>=0.0.9",
+]
 
-[tool.black]
+[tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
+ignore = [
+    "A002",
+    "COM812",
+    "D",
+    "E203",
+    "E722",
+    "EM101",
+    "EM102",
+    "FIX002",
+    "RUF002",
+    "S101",
+    "TD",
+    "TRY003",
+    "TRY300",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.ruff.lint.per-file-ignores]
+"test/*" = ["INP001", "PLR2004", "SLF001"]
+
+[tool.ty.environment]
+python-version = "3.10"
