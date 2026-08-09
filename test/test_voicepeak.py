@@ -30,7 +30,7 @@ def mock_process(monkeypatch, *results):
 @pytest.mark.asyncio
 async def test_get_narrator_name_list_decodes_terminal_output(monkeypatch):
     client = create_client(monkeypatch)
-    process = ProcessResult("Japanese Female 1\nJapanese Male 1\n".encode())
+    process = ProcessResult(b"Japanese Female 1\nJapanese Male 1\n")
     create_subprocess = mock_process(monkeypatch, process)
 
     assert await client.get_narrator_name_list() == ("Japanese Female 1", "Japanese Male 1")
@@ -46,7 +46,7 @@ async def test_get_narrator_name_list_decodes_terminal_output(monkeypatch):
 @pytest.mark.asyncio
 async def test_get_emotion_list_decodes_terminal_output(monkeypatch):
     client = create_client(monkeypatch)
-    process = ProcessResult("happy\nsad\n".encode())
+    process = ProcessResult(b"happy\nsad\n")
     mock_process(monkeypatch, process)
 
     assert await client.get_emotion_list("Japanese Female 1") == ("happy", "sad")
@@ -58,9 +58,9 @@ async def test_get_narrator_list_uses_each_terminal_output(monkeypatch):
     import voicepeak_wrapper
 
     processes = (
-        ProcessResult("Japanese Female 1\nJapanese Male 1\n".encode()),
-        ProcessResult("happy\nsad\n".encode()),
-        ProcessResult("happy\nangry\n".encode()),
+        ProcessResult(b"Japanese Female 1\nJapanese Male 1\n"),
+        ProcessResult(b"happy\nsad\n"),
+        ProcessResult(b"happy\nangry\n"),
     )
     mock_process(monkeypatch, *processes)
 
@@ -73,7 +73,7 @@ async def test_get_narrator_list_uses_each_terminal_output(monkeypatch):
 @pytest.mark.asyncio
 async def test_say_text_returns_decoded_terminal_output(monkeypatch):
     client = create_client(monkeypatch)
-    process = ProcessResult("completed\n".encode())
+    process = ProcessResult(b"completed\n")
     create_subprocess = mock_process(monkeypatch, process)
 
     result = await client.say_text("本日は晴天なり", output_path="output.wav")
@@ -94,7 +94,7 @@ async def test_say_text_returns_decoded_terminal_output(monkeypatch):
 @pytest.mark.asyncio
 async def test_terminal_error_is_decoded_as_runtime_error(monkeypatch):
     client = create_client(monkeypatch)
-    process = ProcessResult(stderr="narrator not found\n".encode())
+    process = ProcessResult(stderr=b"narrator not found\n")
     mock_process(monkeypatch, process)
 
     with pytest.raises(RuntimeError, match="narrator not found"):

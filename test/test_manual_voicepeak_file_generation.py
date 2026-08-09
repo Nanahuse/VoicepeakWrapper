@@ -17,13 +17,13 @@ Or run just this module:
         test/test_manual_voicepeak_file_generation.py --runxfail
 """
 
+import asyncio
 import os
+from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.xfail(
-    run=False, reason="requires a local VOICEPEAK installation; pass --runxfail to run"
-)
+pytestmark = pytest.mark.xfail(run=False, reason="requires a local VOICEPEAK installation; pass --runxfail to run")
 
 TEST_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_PATH = os.path.join(TEST_DIRECTORY, "output")
@@ -35,19 +35,18 @@ async def test_get_narrator_list():
 
     client = voicepeak_wrapper.Voicepeak()
     narrators = await client.get_narrator_list()
-    with open(os.path.join(OUTPUT_PATH, "narrators.txt"), mode="w", encoding="UTF-8") as f:
-        for narrator in narrators:
-            f.write(narrator.name)
-            f.write(" : ")
-            f.write(", ".join(narrator.emotions))
-            f.write("\n")
+    lines = []
+    for narrator in narrators:
+        lines.append(f"{narrator.name} : {', '.join(narrator.emotions)}\n")
 
-            await client.say_text(
-                "本日は晴天なり",
-                output_path=os.path.join(OUTPUT_PATH, f"narrator_{narrator.name}.wav"),
-                narrator=narrator,
-                emotions={narrator.emotions[1]: 100},
-            )
+        await client.say_text(
+            "本日は晴天なり",
+            output_path=os.path.join(OUTPUT_PATH, f"narrator_{narrator.name}.wav"),
+            narrator=narrator,
+            emotions={narrator.emotions[1]: 100},
+        )
+
+    await asyncio.to_thread(Path(OUTPUT_PATH, "narrators.txt").write_text, "".join(lines), encoding="UTF-8")
 
 
 @pytest.mark.asyncio
@@ -56,8 +55,11 @@ async def test_get_narrator_name_list():
 
     client = voicepeak_wrapper.Voicepeak()
     narrator_names = await client.get_narrator_name_list()
-    with open(os.path.join(OUTPUT_PATH, "narrator_names.txt"), mode="w", encoding="UTF-8") as f:
-        f.writelines(f"{name}\n" for name in narrator_names)
+    await asyncio.to_thread(
+        Path(OUTPUT_PATH, "narrator_names.txt").write_text,
+        "".join(f"{name}\n" for name in narrator_names),
+        encoding="UTF-8",
+    )
 
 
 @pytest.mark.asyncio
@@ -67,14 +69,12 @@ async def test_get_emotion_list():
     client = voicepeak_wrapper.Voicepeak()
 
     narrator_names = await client.get_narrator_name_list()
-    with open(os.path.join(OUTPUT_PATH, "emotions.txt"), mode="w", encoding="UTF-8") as f:
-        for name in narrator_names:
-            emotion_list = await client.get_emotion_list(name)
+    lines = []
+    for name in narrator_names:
+        emotion_list = await client.get_emotion_list(name)
+        lines.append(f"{name} : {', '.join(emotion_list)}\n")
 
-            f.write(name)
-            f.write(" : ")
-            f.write(", ".join(emotion_list))
-            f.write("\n")
+    await asyncio.to_thread(Path(OUTPUT_PATH, "emotions.txt").write_text, "".join(lines), encoding="UTF-8")
 
     with pytest.raises(RuntimeError):
         await client.get_emotion_list("hogehoge")

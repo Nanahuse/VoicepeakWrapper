@@ -24,24 +24,29 @@ dev = [
 
 [tool.ruff]
 line-length = 120
-lint.fixable = ["ALL"]
-lint.select = ["ALL"]
-lint.ignore = [
+
+[tool.ruff.lint]
+ignore = [
     "A002",
+    "COM812",
+    "D",
+    "E203",
+    "E722",
     "EM101",
     "EM102",
     "FIX002",
+    "RUF002",
     "S101",
+    "TD",
     "TRY003",
     "TRY300",
-    "COM812",
-    "RUF002",
-    "D",
-    "TD",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "test/*" = ["INP001", "PLR2004", "SLF001"]
+
+[tool.ty.environment]
+python-version = "3.10"
