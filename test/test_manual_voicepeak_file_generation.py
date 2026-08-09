@@ -1,14 +1,25 @@
+# Copyright (c) 2023 Nanahuse
+# This software is released under the MIT License
+# https://opensource.org/license/mit/
+
 """VOICEPEAK integration tests that create output files.
 
-These tests require a local VOICEPEAK installation. Pytest does not collect this
-module by default; run it explicitly when file-generation coverage is needed:
+These tests require a local VOICEPEAK installation and are skipped by default.
+Run the full suite with the option below when file-generation coverage is needed:
 
-    uv run --extra dev --with-editable . pytest test/manual_voicepeak_file_generation.py
+    uv run --group dev --with-editable . pytest --run-voicepeak-integration
+
+Or run just this module:
+
+    uv run --group dev --with-editable . pytest \\
+        test/test_manual_voicepeak_file_generation.py --run-voicepeak-integration
 """
 
 import os
 
 import pytest
+
+pytestmark = pytest.mark.voicepeak
 
 TEST_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_PATH = os.path.join(TEST_DIRECTORY, "output")
