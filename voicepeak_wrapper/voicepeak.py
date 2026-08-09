@@ -25,7 +25,7 @@ class Voicepeak:
         標準のインストール先ではない場所にVOICEPEAKインストールした場合はexe_pathを指定してください。
 
         Args:
-            exe_path (str | pathlib.Path, optional): voicepeak.exeへのパス。Defaultは標準のインストール先。
+            exe_path (str | Path, optional): voicepeak.exeへのパス。Defaultは標準のインストール先。
         """
 
         if not os.path.exists(exe_path):
@@ -122,7 +122,7 @@ class Voicepeak:
         Args:
             text (str): 読み上げるテキスト
 
-            output_path (str | pathlib.Path | None, optional): wavファイル出力先。
+            output_path (str | Path | None, optional): wavファイル出力先。
             指定しないとvoicepeak.exeと同じ階層にoutput.wavが生成される。 Defaults to None.
 
             narrator (Narrator | str | None, optional): 読み上げを行うナレータの種類。Narrator型またはstr型の名前で指定する。 Defaults to None.
@@ -158,9 +158,9 @@ class Voicepeak:
         テキストファイル内のテキストを読み上げたwavファイルを保存する。
 
         Args:
-            text_path (str | pathlib.Path): 読み上げるテキストファイルのパス
+            text_path (str | Path): 読み上げるテキストファイルのパス
 
-            output_path (str | pathlib.Path, optional): wavファイル出力先。Defaultはoutput.wavが生成される。
+            output_path (str | Path, optional): wavファイル出力先。Defaultはoutput.wavが生成される。
 
             narrator (Narrator | str | None, optional): 読み上げを行うナレータの種類。Narrator型またはstr型の名前で指定する。 Defaults to None.
 

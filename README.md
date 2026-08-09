@@ -25,7 +25,7 @@ async def main():
 asyncio.run(main())
 ```
 
-パスを受け取る引数（exe_path, output_path, text_path）には`str`だけでなく`pathlib.Path`も渡せます。
+パスを受け取る引数（exe_path, output_path, text_path）には`str`だけでなく`pathlib.Path`（`Path`）も渡せます。
 
 # License
 MITライセンス  
