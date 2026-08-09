@@ -42,9 +42,6 @@ lint.ignore = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-markers = [
-    "voicepeak: manual integration tests that require a local VOICEPEAK installation (skipped by default; pass --run-voicepeak-integration)",
-]
 
 [tool.ruff.per-file-ignores]
 "test/*" = ["INP001", "PLR2004", "SLF001"]

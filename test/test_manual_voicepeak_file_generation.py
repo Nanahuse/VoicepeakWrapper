@@ -4,22 +4,26 @@
 
 """VOICEPEAK integration tests that create output files.
 
-These tests require a local VOICEPEAK installation and are skipped by default.
-Run the full suite with the option below when file-generation coverage is needed:
+These tests require a local VOICEPEAK installation and are marked xfail with
+``run=False``, so they are reported as NOTRUN without launching VOICEPEAK. Run
+them with pytest's built-in ``--runxfail`` option when file-generation coverage
+is needed:
 
-    uv run --group dev --with-editable . pytest --run-voicepeak-integration
+    uv run --group dev --with-editable . pytest --runxfail
 
 Or run just this module:
 
     uv run --group dev --with-editable . pytest \\
-        test/test_manual_voicepeak_file_generation.py --run-voicepeak-integration
+        test/test_manual_voicepeak_file_generation.py --runxfail
 """
 
 import os
 
 import pytest
 
-pytestmark = pytest.mark.voicepeak
+pytestmark = pytest.mark.xfail(
+    run=False, reason="requires a local VOICEPEAK installation; pass --runxfail to run"
+)
 
 TEST_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_PATH = os.path.join(TEST_DIRECTORY, "output")
